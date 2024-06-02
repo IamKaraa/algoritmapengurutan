@@ -1,1 +1,206 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <chrono>
+#include <random>
+#include <fstream>
 
+using namespace std;
+using namespace std::chrono;
+
+// Bubble Sort
+void bubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; ++i) {
+        for (int j = 0; j < n - i - 1; ++j) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}
+
+// Insertion Sort
+void insertionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 1; i < n; ++i) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            --j;
+        }
+        arr[j + 1] = key;
+    }
+}
+
+// Selection Sort
+void selectionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; ++i) {
+        int min_idx = i;
+        for (int j = i + 1; j < n; ++j) {
+            if (arr[j] < arr[min_idx]) {
+                min_idx = j;
+            }
+        }
+        swap(arr[i], arr[min_idx]);
+    }
+}
+
+// Merge Sort
+void merge(vector<int>& arr, int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+    vector<int> L(n1), R(n2);
+    for (int i = 0; i < n1; ++i) {
+        L[i] = arr[l + i];
+    }
+    for (int i = 0; i < n2; ++i) {
+        R[i] = arr[m + 1 + i];
+    }
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k++] = L[i++];
+        } else {
+            arr[k++] = R[j++];
+        }
+    }
+    while (i < n1) {
+        arr[k++] = L[i++];
+    }
+    while (j < n2) {
+        arr[k++] = R[j++];
+    }
+}
+
+void mergeSort(vector<int>& arr, int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}
+
+// Quick Sort
+int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; ++j) {
+        if (arr[j] < pivot) {
+            ++i;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);
+    return i + 1;
+}
+
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+// Fungsi untuk mengukur waktu eksekusi
+template <typename Func>
+long long measureTime(Func sortFunc, vector<int> arr) {
+    auto start = high_resolution_clock::now();
+    sortFunc(arr);
+    auto end = high_resolution_clock::now();
+    return duration_cast<microseconds>(end - start).count();
+}
+
+void runTests() {
+    ofstream results("sorting_results.csv");
+    results << "Algorithm,Complexity,Size,Condition,Time (μs)\n";
+
+    vector<int> sizes = {10, 100, 500, 1000, 10000};
+    vector<string> conditions = {"Acak", "Terurut Terbalik", "Terurut"};
+
+    vector<pair<string, void(*)(vector<int>&)>> algorithms = {
+        {"Bubble Sort", bubbleSort},
+        {"Insertion Sort", insertionSort},
+        {"Selection Sort", selectionSort}
+    };
+
+    vector<pair<string, void(*)(vector<int>&, int, int)>> advanced_algorithms = {
+        {"Merge Sort", mergeSort},
+        {"Quick Sort", quickSort}
+    };
+
+    default_random_engine generator;
+    uniform_int_distribution<int> distribution(1, 10000);
+
+    for (const auto& algorithm : algorithms) {
+        for (int size : sizes) {
+            vector<int> data(size);
+            for (int& val : data) {
+                val = distribution(generator);
+            }
+
+            vector<int> reversed_data = data;
+            sort(reversed_data.begin(), reversed_data.end(), greater<int>());
+
+            vector<int> sorted_data = data;
+            sort(sorted_data.begin(), sorted_data.end());
+
+            for (const string& condition : conditions) {
+                vector<int> data_copy;
+                if (condition == "Acak") {
+                    data_copy = data;
+                } else if (condition == "Terurut Terbalik") {
+                    data_copy = reversed_data;
+                } else if (condition == "Terurut") {
+                    data_copy = sorted_data;
+                }
+
+                long long time_taken = measureTime(algorithm.second, data_copy);
+                results << algorithm.first << ",O(n^2)," << size << "," << condition << "," << time_taken << "\n";
+            }
+        }
+    }
+
+    for (const auto& algorithm : advanced_algorithms) {
+        for (int size : sizes) {
+            vector<int> data(size);
+            for (int& val : data) {
+                val = distribution(generator);
+            }
+
+            vector<int> reversed_data = data;
+            sort(reversed_data.begin(), reversed_data.end(), greater<int>());
+
+            vector<int> sorted_data = data;
+            sort(sorted_data.begin(), sorted_data.end());
+
+            for (const string& condition : conditions) {
+                vector<int> data_copy;
+                if (condition == "Acak") {
+                    data_copy = data;
+                } else if (condition == "Terurut Terbalik") {
+                    data_copy = reversed_data;
+                } else if (condition == "Terurut") {
+                    data_copy = sorted_data;
+                }
+
+                auto sortFunc = [&](vector<int>& arr) { algorithm.second(arr, 0, arr.size() - 1); };
+                long long time_taken = measureTime(sortFunc, data_copy);
+                string complexity = algorithm.first == "Merge Sort" ? "O(n log n)" : "O(n log n) avg, O(n^2) worst";
+                results << algorithm.first << "," << complexity << "," << size << "," << condition << "," << time_taken << "\n";
+            }
+        }
+    }
+
+    results.close();
+}
+
+int main() {
+    runTests();
+    cout << "Results saved to sorting_results.csv" << endl;
+    return 0;
+}
